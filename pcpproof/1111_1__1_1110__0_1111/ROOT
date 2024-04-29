@@ -1,0 +1,11 @@
+session "PCPLib" in "../../lib" = HOL +
+    theories
+        Automata
+        PCP
+        PCPTrans
+        PCPAutomata
+        AutomataUtil
+
+session "PCPProof" = "PCPLib" + 
+    theories
+        invariant

@@ -1,0 +1,7 @@
+session "PCPLib" = "HOL" + 
+    theories
+        Automata
+        PCP
+        PCPTrans
+        PCPAutomata
+        AutomataUtil
