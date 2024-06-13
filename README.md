@@ -3,5 +3,5 @@
 
 ## 検証の実行
 ```sh
-isabelle build -j3 -D pcpproof/1110_1__01_11__1_011 -o parallel_proofs=2 -o ML_system_64 -v PCPProof 
+isabelle build -D pcpproof/1110_1__01_11__1_011 -v PCPProof 
 ```
