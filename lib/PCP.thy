@@ -28,12 +28,33 @@ fun get_tiles :: "pcp \<Rightarrow> nat list \<Rightarrow> tile list" where
 
 value "[(''0100'', ''1102''), (''0100'', ''110'')] ! 1"
 
+
+fun concatenate_strings_seq :: "alphabet list list \<Rightarrow> nat list \<Rightarrow> string" where
+"concatenate_strings_seq _ [] = ''''" |
+"concatenate_strings_seq ss (i # is) = 
+     (concatenate_strings_seq ss is) @ (ss ! i)"
+
+lemma concatenate_strings_seq_m:
+  "(concatenate_strings_seq ss is)@(concatenate_strings_seq ss js) = concatenate_strings_seq ss (js@is)"
+  apply(induct js) apply simp by simp
+
 fun concatenate_tiles_seq_upper :: "tile list \<Rightarrow> nat list \<Rightarrow> string" where
 "concatenate_tiles_seq_upper _ [] = ''''" |
 "concatenate_tiles_seq_upper ts (i # is) = 
      (concatenate_tiles_seq_upper ts is) @ fst (ts ! i)"
 
 value "concatenate_tiles_seq_upper [([C0,C1,C0,C0], [C1,C1,C0]), ([C0,C0,C0], [C1,C1,C0])] [1,0,0,0]"
+
+lemma concatenate_tiles_seq_upper_eq:
+  shows "all_lower is (length ts) \<Longrightarrow> concatenate_tiles_seq_upper ts is = concatenate_strings_seq (map fst ts) is"
+proof(induct "is")
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a "is")
+  then have "(map fst ts) ! a = fst(ts !a)" by auto
+  then show ?case using Cons.hyps Cons.prems by auto
+qed
 
 fun swap_tile :: "tile \<Rightarrow> tile" where
   "swap_tile (a,b) = (b,a)"
@@ -49,6 +70,17 @@ fun concatenate_tiles_seq_bottom :: "tile list \<Rightarrow> nat list \<Rightarr
 "concatenate_tiles_seq_bottom ts (i # is) = 
      (concatenate_tiles_seq_bottom ts is) @ snd (ts ! i)"
 
+
+lemma concatenate_tiles_seq_bottom_eq:
+  shows "all_lower is (length ts) \<Longrightarrow> concatenate_tiles_seq_bottom ts is = concatenate_strings_seq (map snd ts) is"
+proof(induct "is")
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a "is")
+  then have "(map snd ts) ! a = snd(ts !a)" by auto
+  then show ?case using Cons.hyps Cons.prems by auto
+qed
 
 lemma map_swap_tile: "\<forall>i < length ts. (map swap_tile ts) ! i = swap_tile (ts ! i)"
   using nth_map [of _ ts reverse_tile] by auto

@@ -1,7 +1,10 @@
 session "PCPLib" = "HOL" + 
+  options [document = pdf, document_output = "output"]
+
     theories
         Automata
         PCP
         PCPTrans
         PCPAutomata
         AutomataUtil
+    

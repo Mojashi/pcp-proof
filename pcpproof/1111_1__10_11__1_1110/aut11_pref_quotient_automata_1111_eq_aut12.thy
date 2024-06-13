@@ -1,0 +1,6 @@
+theory aut11_pref_quotient_automata_1111_eq_aut12 
+  imports Main "aut11_pref_quotient_automata_1111_contains_aut12" "aut12_contains_aut11_pref_quotient_automata_1111" "aut11_pref_quotient_automata_1111" "aut12"
+begin
+  lemma "aut11_pref_quotient_automata_1111_eq_aut12": "lang aut11_pref_quotient_automata_1111 = lang aut12"
+    using aut11_pref_quotient_automata_1111_contains_aut12 aut12_contains_aut11_pref_quotient_automata_1111 by auto
+end
