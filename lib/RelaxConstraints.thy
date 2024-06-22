@@ -19,8 +19,8 @@ definition is_euler_constraint::"('in, 'out, 'state) Trans \<Rightarrow> 'state 
   )"
 
 lemma euc_decompose:
-  "coeff (edges_used_count (Move x1a x2 x3 r)) = 
-   coeff ((Edge x1a x2 x3 (get_head_state r), 1)#(edges_used_count r))"
+  "(edges_used_count (Move x1a x2 x3 r)) = 
+   ((Edge x1a x2 x3 (get_head_state r), 1)#(edges_used_count r))"
   by auto
 
 lemma distinct_member_filter:
@@ -167,6 +167,7 @@ qed
 
 lemma euler_constraint_is_relax:
   fixes t::"('in, 'out, 'state) Trans"
+  and ec::"('in, 'out, 'state) Edge Constraint"
   assumes "is_euler_constraint t s ec"
   shows "is_relax_constraint t ec"
 unfolding is_relax_constraint_def proof (rule, rule)
@@ -181,5 +182,68 @@ unfolding is_relax_constraint_def proof (rule, rule)
   show "assign_constraint (coeff (edges_used_count r)) ec"
     using LHS OP RHS
     by (metis Constraint.collapse assign_constraint.simps(3))
-qed                  
+qed
+
+lemma euc_positive:
+  shows "coeff (edges_used_count r) e \<ge> 0"
+  apply(induct r) apply simp by simp
+
+lemma positive_constraint_is_relax:
+  fixes t::"('in, 'out, 'state) Trans"
+  assumes "e \<in> transition t"
+  shows "is_relax_constraint t (Constraint [(e, 1)] GE 0)"
+  unfolding is_relax_constraint_def apply (rule, rule, simp only:assign_constraint.simps assign_lincomb.simps)
+  using euc_positive by auto
+
+fun input_more_than_1_cons::"('in, 'out, 'state) Trans \<Rightarrow> ('in, 'out, 'state) Edge Constraint \<Rightarrow> bool" where
+  "input_more_than_1_cons t (Constraint lc cop r) = ((r=1) \<and> (cop = GE) \<and> (
+    \<forall>e. e\<in>transition t \<longrightarrow> (coeff lc e = (if input e = None then 0 else 1))
+  ))"
+
+lemma input_len_more_than_1_is_relax:
+  fixes t::"('in, 'out, 'state) Trans"
+  and c::"('in, 'out, 'state) Edge Constraint"
+  assumes "input_more_than_1_cons t c"
+  shows "is_relax_constraint t c"
+unfolding is_relax_constraint_def proof (rule, rule)
+  obtain lexp where C:"c = Constraint lexp GE 1" and 
+                    D:"\<forall>e. e\<in>transition t \<longrightarrow> (coeff lexp e = (if input e = None then 0 else 1))"
+    using assms input_more_than_1_cons.elims(2) by blast
+  fix r
+  assume A:"is_initial_accept_run t r \<and> 0 < length (agg_input r)"
+  then have HCE:"has_correspond_edges t r" by simp
+  have GE1:"length (agg_input r) \<ge> 1" using A by linarith
+  have "assign_lincomb (coeff (edges_used_count r)) lexp = rat_of_nat (length (agg_input r))"
+    apply(simp only:assign_lincomb_comm) using HCE proof (induct r)
+    case (End x)
+    then show ?case by simp
+  next
+    case (Move x1a x2 x3 r)
+    then have IH:"rat_of_nat (length (agg_input r)) = assign_lincomb (coeff lexp) (edges_used_count r)" by auto
+    have IN:"(Edge x1a x2 x3 (get_head_state r)) \<in> transition t" 
+      using Move.prems by fastforce
+    have A:"assign_lincomb (coeff lexp) (edges_used_count (Move x1a x2 x3 r)) = 
+        coeff lexp (Edge x1a x2 x3 (get_head_state r)) +
+         assign_lincomb (coeff lexp) (edges_used_count r)"
+      by simp
+    show ?case proof(cases x2)
+      case None
+      then have "coeff lexp (Edge x1a x2 x3 (get_head_state r)) = 0"
+        using D IN by simp
+      show ?thesis using Move D IH by auto
+    next
+      case (Some a)
+      then have B:"coeff lexp (Edge x1a x2 x3 (get_head_state r)) = 1"
+        using D IN by simp
+      have "length (agg_input (Move x1a x2 x3 r)) = length (agg_input r) + 1"
+        using Some by simp
+      then show ?thesis using IH Move D B A by linarith
+    qed
+  qed
+
+  then have K:"assign_lincomb (coeff (edges_used_count r)) lexp \<ge> 1" using GE1 by simp
+  show "assign_constraint (coeff (edges_used_count r)) c"
+    unfolding C apply(simp only:assign_constraint.simps) using K by simp
+qed
+
 end

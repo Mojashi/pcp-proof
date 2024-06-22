@@ -4,7 +4,7 @@ begin
 
 locale pcp_vec_relax_locale =
   fixes ts::"pcp" and relax_trans::"(PCP.alphabet, 'v LinComb, nat) Trans"
-  assumes TOTAL:"is_total_trans relax_trans"
+  assumes TOTAL:"is_total_trans relax_trans" and "finite (UNIV::'v set)"
 begin
 
 interpretation p: pcp_locale ts by simp?
@@ -90,5 +90,97 @@ proof -
   qed
   then show "¬ have_solution ts" by blast
 qed
+
+theorem relax_unable_zero_then_no_solution'':
+  assumes "is_zerovec_relax_mip diff_vec_trans cs"
+          "\<not>have_solution_mip cs"
+  shows "¬have_solution ts"
+proof -
+  have "have_solution ts ⟹ False" proof -
+    assume "have_solution ts"
+    then obtain sol where SOL:"is_solution ts sol" using have_solution_def by blast
+    define rsol where "rsol = (rev (map (λi. length ts - i - 1) sol))"
+    obtain r where R:"r ∈ transduce_runs diff_vec_trans rsol ∧ coeff (agg_lincomb (agg_output r)) = coeff zero"
+      using solution_get_diff_0[OF SOL] rsol_def by auto
+    then have VALID_R:"is_initial_accept_run diff_vec_trans r" by blast
+    then have HCE:"has_correspond_edges diff_vec_trans r" by blast
+    have "agg_input r = (rev (map (λi. length ts - i - 1) sol))" using R rsol_def by force
+    then have LEN_R:"0 < length (agg_input r)" using SOL using is_solution_def by force
+    have ZERO:"coeff (calc_output_from_euc (edges_used_count r)) = coeff zero"
+      using relax_output[OF  HCE] R by metis
+    have "assign_mip (coeff (edges_used_count r)) cs" 
+      using is_zerovec_relax_mip_def[of diff_vec_trans cs] VALID_R LEN_R assms(1) R by blast
+    then have NONZERO:"coeff zero ≠ coeff (calc_output_from_euc (edges_used_count r))"
+      using assms(2) by blast
+    show ?thesis using NONZERO ZERO by argo
+  qed
+  then show "¬ have_solution ts" by blast
+qed
+
+fun is_v_output_lincomb::"'v \<Rightarrow> (nat, 'v LinComb, (nat × nat) × nat × nat) Edge LinComb \<Rightarrow> bool" where
+  "is_v_output_lincomb v lc = (\<forall>e. e\<in>transition diff_vec_trans \<longrightarrow> 
+    coeff lc e = (coeff (none_then_zero (out e)) v)
+  )"
+
+lemma v_output_lincomb_simulate_euc:
+  assumes "is_v_output_lincomb v lexp"
+          "a = edges_used_count r"
+          "has_correspond_edges diff_vec_trans r"
+  shows"assign_lincomb (coeff a) lexp = coeff (calc_output_from_euc a) v" 
+    unfolding assms(2) using assms(3) proof(induct r)
+    case (End x)
+    then show ?case by simp
+  next
+    case (Move x1a x2 x3 r)
+    have IH:"assign_lincomb (coeff (edges_used_count r)) lexp = coeff (calc_output_from_euc (edges_used_count r)) v"
+      using Move by auto
+    have K:"edges_used_count (Move x1a x2 x3 r) = (Edge x1a x2 x3 (get_head_state r), 1)#(edges_used_count r)"
+      by auto
+    have A:"assign_lincomb (coeff (edges_used_count (Move x1a x2 x3 r))) lexp = 
+          (coeff lexp (Edge x1a x2 x3 (get_head_state r))) +  coeff (calc_output_from_euc (edges_used_count r)) v"
+      apply(simp only:K) apply (simp only:assign_lincomb_comm) apply(simp only:assign_lincomb_head)
+      using IH by (metis assign_lincomb_comm fst_conv mult.right_neutral snd_conv)
+
+      have "(Edge x1a x2 x3 (get_head_state r)) \<in> transition diff_vec_trans"
+        by (meson Move.prems has_correspond_edges.simps(2))
+      then have "coeff lexp (Edge x1a x2 x3 (get_head_state r)) = coeff (none_then_zero x3) v"
+        using assms(1) by simp
+
+    then show ?case using A by simp
+  qed
+
+fun is_v_output_zero_cons::"'v \<Rightarrow> (nat, 'v LinComb, (nat × nat) × nat × nat) Edge Constraint \<Rightarrow> bool" where
+  "is_v_output_zero_cons v (Constraint lexp cop r) = (
+    (is_v_output_lincomb v lexp) \<and> (r = 0) \<and> (cop = EQ)
+  )"
+
+lemma zero_runs_satisfy_out_cons:
+  assumes "is_v_output_zero_cons v c"
+          "a = edges_used_count r"
+          "has_correspond_edges diff_vec_trans r"
+  shows "coeff zero v = coeff (calc_output_from_euc a) v \<Longrightarrow> assign_constraint (coeff a) c"
+proof -
+  obtain lexp where LE:"c = Constraint lexp EQ 0" and 
+                    LE':"\<forall>e. e\<in>transition diff_vec_trans \<longrightarrow> 
+                          coeff lexp e = (coeff (none_then_zero (out e)) v)"
+    using assms 
+    by (metis Constraint.exhaust_sel is_v_output_lincomb.simps is_v_output_zero_cons.simps)
+  assume ASM:"coeff zero v = coeff (calc_output_from_euc a) v"
+  have "assign_lincomb (coeff a) lexp = coeff (calc_output_from_euc a) v"
+    using v_output_lincomb_simulate_euc LE' assms by auto
+
+  then have "assign_lincomb (coeff a) lexp = 0"
+    using ASM[symmetric] by auto
+  
+  then show "assign_constraint (coeff a) c" using assms 
+    by (metis LE assign_constraint.simps(3))
+qed
+
+lemma v_output_zero_cons_is_zerovec_relax:
+  "is_v_output_zero_cons v c \<Longrightarrow> is_zerovec_relax_constraint diff_vec_trans c"
+  using zero_runs_satisfy_out_cons is_zerovec_relax_constraint_def
+  by (metis relax_output)
+
 end
+
 end

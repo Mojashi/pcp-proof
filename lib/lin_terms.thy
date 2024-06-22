@@ -21,6 +21,20 @@ abbreviation lincomb_eq::"'v LinComb \<Rightarrow> 'v LinComb \<Rightarrow> bool
 fun mult_lincomb::"'v LinComb ⇒ rat ⇒ 'v LinComb" where
   "mult_lincomb lc r = map (\<lambda>(u,c). (u, c * r)) lc"
 
+lemma coeff_mult:
+  "coeff (mult_lincomb a r) v = coeff a v * r"
+proof (induct a)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a1 a2)
+  have A:"coeff (mult_lincomb (a1 # a2) r) v = (if fst a1 = v then snd a1 else 0) * r + coeff a2 v * r"
+    apply simp using Cons by (simp add: case_prod_beta)
+  have B:"coeff (a1 # a2) v * r = (if fst a1 = v then snd a1 else 0) * r + coeff a2 v * r"
+    using distrib_right by auto
+  show ?case using A B by argo
+qed
+
 lemma mult_zero_zero:
   "lincomb_eq (mult_lincomb s 0) zero"
   apply (induct s) apply simp by auto
@@ -76,6 +90,9 @@ fun eq_lincomb::"'v LinComb ⇒ 'v LinComb ⇒ bool" where
 fun assign_lincomb::"'v Assign \<Rightarrow> 'v LinComb \<Rightarrow> rat" where
   "assign_lincomb a lc = sum_list (map (\<lambda>s. (a (fst s)) * (snd s)) lc)"
 
+lemma assign_lincomb_head:
+  "assign_lincomb a (h#t) = ((a (fst h)) * (snd h)) + (assign_lincomb a t)"
+  by auto
 lemma sum_distrib_right:
   fixes f::"'a \<Rightarrow> rat"
   shows "(∑a←as. f a) * y = (∑a←as. (f a) * y)"
@@ -100,7 +117,6 @@ lemma list_sum_list_sum:
 qed
 
 
-find_consts "'a list \<Rightarrow> 'b list \<Rightarrow> ('a\<times>'b) list"
 lemma assign_lincomb_comm:
   fixes a::"'v LinComb" and b::"'v LinComb"
   shows "assign_lincomb (coeff a) b = assign_lincomb (coeff b) a"
@@ -146,6 +162,10 @@ proof(simp only: assign_lincomb.simps coeff.simps)
     using A B[symmetric] B' by simp
 qed
 
+lemma mult_sem:
+  "assign_lincomb a (mult_lincomb l1 r) = (assign_lincomb a l1) * r"
+apply(induct l1) apply simp by (simp add: case_prod_beta' distrib_right)
+  
 fun assign_constraint::"'v Assign \<Rightarrow> 'v Constraint \<Rightarrow> bool" where
   "assign_constraint a (Constraint lexp GE r) = (let lv = assign_lincomb a lexp in  lv \<ge> r)" |
   "assign_constraint a (Constraint lexp LE r) = (let lv = assign_lincomb a lexp in  lv \<le> r)" |
@@ -156,5 +176,63 @@ fun assign_mip::"'v Assign \<Rightarrow> 'v MIP \<Rightarrow> bool" where
 
 lemma assign_add_hom:
   shows "(assign_lincomb a (add_lincomb u v)) = ((assign_lincomb a u) + (assign_lincomb a v))"
-    by auto
+  by auto
+
+abbreviation have_solution_mip::"'v MIP \<Rightarrow> bool" where
+  "have_solution_mip cs \<equiv> \<exists>a. assign_mip a cs"
+
+fun add_cons::"'v Constraint \<Rightarrow> 'v Constraint \<Rightarrow> 'v Constraint" where
+  "add_cons (Constraint l1 GE r1) (Constraint l2 GE r2) = (Constraint (l1@l2) GE (r1+r2))" |
+  "add_cons (Constraint l1 LE r1) (Constraint l2 LE r2) = (Constraint (l1@l2) LE (r1+r2))" |
+  "add_cons (Constraint l1 EQ r1) (Constraint l2 EQ r2) = (Constraint (l1@l2) EQ (r1+r2))" |
+  "add_cons c1 c2 = undefined"
+
+fun opposite_cop::"Comparator \<Rightarrow> Comparator" where 
+  "opposite_cop GE = LE" |
+  "opposite_cop LE = GE" |
+  "opposite_cop EQ = EQ"
+
+fun mult_cons::"'v Constraint \<Rightarrow> rat \<Rightarrow> 'v Constraint" where 
+  "mult_cons (Constraint l1 cop r1) r = 
+     Constraint (mult_lincomb l1 r) (if r \<ge> 0 then cop else opposite_cop cop) (r1 * r)
+  "
+
+lemma mult_cons_valid:
+  assumes "assign_constraint a (Constraint l1 cop r1)"
+  shows "assign_constraint a (mult_cons (Constraint l1 cop r1) r)"
+proof(cases "r \<ge> 0")
+  case True
+  have "assign_lincomb a (mult_lincomb l1 r) = (assign_lincomb a l1) * r"
+    using coeff_mult mult_sem by blast
+  then show ?thesis apply(cases cop)
+    using assms True using mult_right_mono apply auto[1]
+    using assms True using mult_right_mono apply auto[1]
+    using assms True using mult_right_mono by auto[1]
+next
+  case False
+  have "assign_lincomb a (mult_lincomb l1 r) = (assign_lincomb a l1) * r"
+    using coeff_mult mult_sem by blast
+  then show ?thesis  apply(cases cop)
+    using assms False using mult_right_mono apply simp
+    using assms False using mult_right_mono apply simp
+    using assms False using mult_right_mono by simp
+qed
+
+lemma add_cons_valid:
+  assumes "assign_constraint a (Constraint l1 cop r1)"
+          "assign_constraint a (Constraint l2 cop r2)"
+  shows "assign_constraint a (add_cons (Constraint l1 cop r1) (Constraint l2 cop r2))"
+  apply(cases cop) apply(simp_all only:assign_constraint.simps add_cons.simps)
+  using assms apply auto[1] using assms apply auto[1] using assms by auto[1]
+
+lemma weaken_eq_ge:
+  assumes "assign_constraint a (Constraint l1 EQ r1)"
+  shows "assign_constraint a (Constraint l1 GE r1)"
+  using assms by fastforce
+
+lemma weaken_eq_le:
+  assumes "assign_constraint a (Constraint l1 EQ r1)"
+  shows "assign_constraint a (Constraint l1 LE r1)"
+  using assms by fastforce
+
 end
