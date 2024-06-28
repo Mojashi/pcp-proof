@@ -196,7 +196,8 @@ lemma calc_output_from_euc_add_n:
   by auto
 
 
-definition is_relax_constraint::"('in, 'out, 'state) Trans \<Rightarrow> (('in, 'out, 'state) Edge) Constraint \<Rightarrow> bool" where
+definition is_relax_constraint
+::"('in, 'out, 'state) Trans \<Rightarrow> (('in, 'out, 'state) Edge) Constraint \<Rightarrow> bool" where
   "is_relax_constraint t c \<equiv> \<forall>r. is_initial_accept_run t r \<and> length (agg_input r)>0 \<longrightarrow> assign_constraint (coeff (edges_used_count r)) c"
 
 definition is_relax_mip::"('in, 'out, 'state) Trans \<Rightarrow> (('in, 'out, 'state) Edge) MIP \<Rightarrow> bool" where

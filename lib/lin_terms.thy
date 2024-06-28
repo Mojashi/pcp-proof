@@ -18,7 +18,7 @@ abbreviation lincomb_eq::"'v LinComb \<Rightarrow> 'v LinComb \<Rightarrow> bool
   "lincomb_eq a b \<equiv> \<forall>v. coeff a v = coeff b v"
 
 
-fun mult_lincomb::"'v LinComb ⇒ rat ⇒ 'v LinComb" where
+fun mult_lincomb::"'v LinComb \<Rightarrow> rat \<Rightarrow> 'v LinComb" where
   "mult_lincomb lc r = map (\<lambda>(u,c). (u, c * r)) lc"
 
 lemma coeff_mult:
@@ -39,7 +39,7 @@ lemma mult_zero_zero:
   "lincomb_eq (mult_lincomb s 0) zero"
   apply (induct s) apply simp by auto
 
-fun add_lincomb::"'v LinComb ⇒ 'v LinComb ⇒ 'v LinComb" where
+fun add_lincomb::"'v LinComb \<Rightarrow> 'v LinComb \<Rightarrow> 'v LinComb" where
   "add_lincomb  l r  = l@r"
 
 lemma add_coeff_same:
@@ -60,7 +60,7 @@ lemma add_coeff:
   "coeff (add_lincomb a b) s = (coeff a s) + (coeff b s)"
   by simp
 
-fun sub_lincomb::"'v LinComb ⇒ 'v LinComb ⇒ 'v LinComb" where
+fun sub_lincomb::"'v LinComb \<Rightarrow> 'v LinComb \<Rightarrow> 'v LinComb" where
   "sub_lincomb  l r  = add_lincomb l (mult_lincomb r (-1))"
 
 lemma same_sub_zero:
@@ -68,7 +68,7 @@ lemma same_sub_zero:
 proof -
   have "\<forall>s. coeff a s =  - (coeff (mult_lincomb a (-1)) s)"
     apply(induct a) apply auto[1] by auto
-  then show "coeff (a @ map (λ(u, c). (u, - c)) a) = coeff zero" by auto
+  then show "coeff (a @ map (\<lambda>(u, c). (u, - c)) a) = coeff zero" by auto
 qed
 
 lemma sub_add_exc: "lincomb_eq
@@ -84,7 +84,7 @@ fun agg_lincomb::"'v LinComb list \<Rightarrow> 'v LinComb" where
 fun is_zero_lincomb::"'v LinComb \<Rightarrow> bool" where
   "is_zero_lincomb s = (s=zero)"
 
-fun eq_lincomb::"'v LinComb ⇒ 'v LinComb ⇒ bool" where
+fun eq_lincomb::"'v LinComb \<Rightarrow> 'v LinComb \<Rightarrow> bool" where
   "eq_lincomb l r = (\<forall>v. coeff l v = coeff r v)"
 
 fun assign_lincomb::"'v Assign \<Rightarrow> 'v LinComb \<Rightarrow> rat" where
@@ -95,24 +95,24 @@ lemma assign_lincomb_head:
   by auto
 lemma sum_distrib_right:
   fixes f::"'a \<Rightarrow> rat"
-  shows "(∑a←as. f a) * y = (∑a←as. (f a) * y)"
+  shows "(\<Sum>a\<leftarrow>as. f a) * y = (\<Sum>a\<leftarrow>as. (f a) * y)"
   by (simp add: sum_list_mult_const)
 
 lemma list_sum_list_sum:
   fixes f::"'a \<Rightarrow> 'b \<Rightarrow> rat"
-  shows "(∑be←b. (∑ae←a. f ae be)) = (∑ae←a. (∑be←b. f ae be))"
+  shows "(\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>a. f ae be)) = (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. f ae be))"
   apply(induct a) proof simp
   fix a1 and a2
-  have "(∑be←b. ∑ae←a1 # a2. f ae be) = 
-        (∑be←b. f a1 be + (∑ae←a2. f ae be))" by simp
-  then have A: "(∑be←b. ∑ae←a1 # a2. f ae be) = 
-        (∑be←b. f a1 be) + (∑be←b. (∑ae←a2. f ae be))" 
+  have "(\<Sum>be\<leftarrow>b. \<Sum>ae\<leftarrow>a1 # a2. f ae be) = 
+        (\<Sum>be\<leftarrow>b. f a1 be + (\<Sum>ae\<leftarrow>a2. f ae be))" by simp
+  then have A: "(\<Sum>be\<leftarrow>b. \<Sum>ae\<leftarrow>a1 # a2. f ae be) = 
+        (\<Sum>be\<leftarrow>b. f a1 be) + (\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>a2. f ae be))" 
     using sum_list_addf by force
-  have "(∑ae←a1 # a2. sum_list (map (f ae) b)) =
-        (∑be←b. f a1 be) + (∑ae←a2. sum_list (map (f ae) b))" 
+  have "(\<Sum>ae\<leftarrow>a1 # a2. sum_list (map (f ae) b)) =
+        (\<Sum>be\<leftarrow>b. f a1 be) + (\<Sum>ae\<leftarrow>a2. sum_list (map (f ae) b))" 
     by simp
-  then show "(∑be←b. ∑ae←a2. f ae be) = (∑ae←a2. sum_list (map (f ae) b)) ⟹
-       (∑be←b. ∑ae←a1 # a2. f ae be) = (∑ae←a1 # a2. sum_list (map (f ae) b))" 
+  then show "(\<Sum>be\<leftarrow>b. \<Sum>ae\<leftarrow>a2. f ae be) = (\<Sum>ae\<leftarrow>a2. sum_list (map (f ae) b)) \<Longrightarrow>
+       (\<Sum>be\<leftarrow>b. \<Sum>ae\<leftarrow>a1 # a2. f ae be) = (\<Sum>ae\<leftarrow>a1 # a2. sum_list (map (f ae) b))" 
     using A by simp
 qed
 
@@ -121,44 +121,44 @@ lemma assign_lincomb_comm:
   fixes a::"'v LinComb" and b::"'v LinComb"
   shows "assign_lincomb (coeff a) b = assign_lincomb (coeff b) a"
 proof(simp only: assign_lincomb.simps coeff.simps)
-  have A1:"(∑be←b. (∑ae←a. if fst ae = fst be then snd ae else 0) * (snd be)) = 
-        (∑be←b. (∑ae←filter (λae. fst ae = fst be) a. snd ae)* (snd be))"
+  have A1:"(\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>a. if fst ae = fst be then snd ae else 0) * (snd be)) = 
+        (\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>filter (\<lambda>ae. fst ae = fst be) a. snd ae)* (snd be))"
     by(simp add:sum_list_map_filter'[symmetric]) 
-  have A2:"... = (∑be←b. (∑ae←filter (λae. fst ae = fst be) a. snd ae * (snd be)))"  
+  have A2:"... = (\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>filter (\<lambda>ae. fst ae = fst be) a. snd ae * (snd be)))"  
     using sum_distrib_right by metis
-  have A3:"... = (∑be←b. (∑ae←a. if fst ae = fst be then snd ae * (snd be) else 0))"
+  have A3:"... = (\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>a. if fst ae = fst be then snd ae * (snd be) else 0))"
     by (simp add: sum_list_map_filter')
-  have A4:"... = (∑ae←a. (∑be←b. if fst ae = fst be then snd ae * (snd be) else 0))"
+  have A4:"... = (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst ae = fst be then snd ae * (snd be) else 0))"
     using list_sum_list_sum by force
-  have A:"(∑be←b. (∑ae←a. if fst ae = fst be then snd ae else 0) * (snd be)) = 
-          (∑ae←a. (∑be←b. if fst ae = fst be then snd ae * (snd be) else 0))"
+  have A:"(\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>a. if fst ae = fst be then snd ae else 0) * (snd be)) = 
+          (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst ae = fst be then snd ae * (snd be) else 0))"
     using A1 A2 A3 A4 by argo
   
-  have B1:"(∑ae←a. (∑be←b. if fst be = fst ae then snd be else 0) * (snd ae)) = 
-        (∑ae←a. (∑be←filter (λbe. fst be = fst ae) b. snd be)* (snd ae))"
+  have B1:"(\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst be = fst ae then snd be else 0) * (snd ae)) = 
+        (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>filter (\<lambda>be. fst be = fst ae) b. snd be)* (snd ae))"
     by(simp add:sum_list_map_filter'[symmetric]) 
-  have B2:"... = (∑ae←a. (∑be←filter (λbe. fst be = fst ae) b. snd be* (snd ae)))"  
+  have B2:"... = (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>filter (\<lambda>be. fst be = fst ae) b. snd be* (snd ae)))"  
     using sum_distrib_right by metis
-  have B3:"... = (∑ae←a. (∑be←b. if fst be = fst ae then snd be * (snd ae) else 0))"
+  have B3:"... = (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst be = fst ae then snd be * (snd ae) else 0))"
     by (simp add: sum_list_map_filter')
-  have B:"(∑ae←a. (∑be←b. if fst be = fst ae then snd be else 0) * (snd ae)) = 
-          (∑ae←a. (∑be←b. if fst be = fst ae then snd be * (snd ae) else 0))"
+  have B:"(\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst be = fst ae then snd be else 0) * (snd ae)) = 
+          (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst be = fst ae then snd be * (snd ae) else 0))"
     using B1 B2 B3 by argo
   have B':"... = 
-          (∑ae←a. (∑be←b. if fst ae = fst be then snd ae * (snd be) else 0))"
+          (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst ae = fst be then snd ae * (snd be) else 0))"
   proof -
     define op::"'v\<times>rat\<Rightarrow>'v\<times>rat\<Rightarrow>rat" where 
       "op = (\<lambda>ae be. if fst be = fst ae then snd be * snd ae else 0)"
     then have op_comm:"\<And>ae be. op ae be = op be ae" by simp
-    have A:"(∑ae←a. ∑be←b. if fst be = fst ae then snd be * snd ae else 0) = 
-          (∑ae←a. ∑be←b. (op ae be))" using op_def by simp
-    have "(∑ae←a. ∑be←b. if fst ae = fst be then snd ae * snd be else 0) = 
-          (∑ae←a. ∑be←b. (op be ae))" using op_def by simp
+    have A:"(\<Sum>ae\<leftarrow>a. \<Sum>be\<leftarrow>b. if fst be = fst ae then snd be * snd ae else 0) = 
+          (\<Sum>ae\<leftarrow>a. \<Sum>be\<leftarrow>b. (op ae be))" using op_def by simp
+    have "(\<Sum>ae\<leftarrow>a. \<Sum>be\<leftarrow>b. if fst ae = fst be then snd ae * snd be else 0) = 
+          (\<Sum>ae\<leftarrow>a. \<Sum>be\<leftarrow>b. (op be ae))" using op_def by simp
     then show ?thesis using op_comm A by simp
   qed
 
-  show "(∑be←b. (∑ae←a. if fst ae = fst be then snd ae else 0) * (snd be)) = 
-        (∑ae←a. (∑be←b. if fst be = fst ae then snd be else 0) * (snd ae))"
+  show "(\<Sum>be\<leftarrow>b. (\<Sum>ae\<leftarrow>a. if fst ae = fst be then snd ae else 0) * (snd be)) = 
+        (\<Sum>ae\<leftarrow>a. (\<Sum>be\<leftarrow>b. if fst be = fst ae then snd be else 0) * (snd ae))"
     using A B[symmetric] B' by simp
 qed
 
@@ -217,6 +217,7 @@ next
     using assms False using mult_right_mono apply simp
     using assms False using mult_right_mono by simp
 qed
+
 
 lemma add_cons_valid:
   assumes "assign_constraint a (Constraint l1 cop r1)"

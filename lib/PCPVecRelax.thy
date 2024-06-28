@@ -18,14 +18,14 @@ abbreviation diff_vec_trans::"(nat, 'v LinComb, (nat×nat)×nat×nat) Trans" whe
   "diff_vec_trans ≡ sub_vec_trans VU VD"
 
 lemma transduce_runs_then_initial:
-  "r ∈ transduce_runs t ins ⟹ get_head_state r = initial t"
+  "r ∈ transduce_runs t ins \<Longrightarrow> get_head_state r = initial t"
   by blast
 
 lemma solution_get_diff_0:
   assumes "is_solution ts ans"
-  shows "coeff zero ∈ coeff ` (agg_lincomb ` (transduce diff_vec_trans (rev (map (λi. length ts - i - 1) ans))))"
+  shows "coeff zero ∈ coeff ` (agg_lincomb ` (transduce diff_vec_trans (rev (map (\<lambda>i. length ts - i - 1) ans))))"
 proof -
-  define ans' where "ans' = (rev (map (λi. length ts - i - 1) ans))"
+  define ans' where "ans' = (rev (map (\<lambda>i. length ts - i - 1) ans))"
   obtain e where E:"e ∈ transduce p.UT ans' ∩ transduce p.DT ans'" using ans'_def p.solution_trans[OF assms(1)] by auto
   obtain r1 where R1:"r1 ∈ transduce_runs p.UT ans' ∧ agg_output r1 = e" using E by auto
   obtain r2 where R2:"r2 ∈ transduce_runs p.DT ans' ∧ agg_output r2 = e" using E by auto
@@ -61,24 +61,24 @@ proof -
 qed
 
 lemma unable_zero_then_no_solution:
-  assumes "⋀i. length i > 0 ⟹ coeff zero ∉ coeff ` (transduce_vec diff_vec_trans i)"
+  assumes "⋀i. length i > 0 \<Longrightarrow> coeff zero ∉ coeff ` (transduce_vec diff_vec_trans i)"
   shows "¬have_solution ts"
   using assms solution_get_diff_0 have_solution_def is_solution_def by fastforce
 
 theorem relax_unable_zero_then_no_solution:
   assumes "is_relax_mip diff_vec_trans cs"
-          "⋀a. assign_mip (coeff a) cs ⟹ coeff zero ≠ coeff (calc_output_from_euc a)"
+          "⋀a. assign_mip (coeff a) cs \<Longrightarrow> coeff zero ≠ coeff (calc_output_from_euc a)"
   shows "¬have_solution ts"
 proof -
-  have "have_solution ts ⟹ False" proof -
+  have "have_solution ts \<Longrightarrow> False" proof -
     assume "have_solution ts"
     then obtain sol where SOL:"is_solution ts sol" using have_solution_def by blast
-    define rsol where "rsol = (rev (map (λi. length ts - i - 1) sol))"
+    define rsol where "rsol = (rev (map (\<lambda>i. length ts - i - 1) sol))"
     obtain r where R:"r ∈ transduce_runs diff_vec_trans rsol ∧ coeff (agg_lincomb (agg_output r)) = coeff zero"
       using solution_get_diff_0[OF SOL] rsol_def by auto
     then have VALID_R:"is_initial_accept_run diff_vec_trans r" by blast
     then have HCE:"has_correspond_edges diff_vec_trans r" by blast
-    have "agg_input r = (rev (map (λi. length ts - i - 1) sol))" using R rsol_def by force
+    have "agg_input r = (rev (map (\<lambda>i. length ts - i - 1) sol))" using R rsol_def by force
     then have LEN_R:"0 < length (agg_input r)" using SOL using is_solution_def by force
     have ZERO:"coeff (calc_output_from_euc (edges_used_count r)) = coeff zero"
       using relax_output[OF  HCE] R by metis
@@ -96,15 +96,15 @@ theorem relax_unable_zero_then_no_solution'':
           "\<not>have_solution_mip cs"
   shows "¬have_solution ts"
 proof -
-  have "have_solution ts ⟹ False" proof -
+  have "have_solution ts \<Longrightarrow> False" proof -
     assume "have_solution ts"
     then obtain sol where SOL:"is_solution ts sol" using have_solution_def by blast
-    define rsol where "rsol = (rev (map (λi. length ts - i - 1) sol))"
+    define rsol where "rsol = (rev (map (\<lambda>i. length ts - i - 1) sol))"
     obtain r where R:"r ∈ transduce_runs diff_vec_trans rsol ∧ coeff (agg_lincomb (agg_output r)) = coeff zero"
       using solution_get_diff_0[OF SOL] rsol_def by auto
     then have VALID_R:"is_initial_accept_run diff_vec_trans r" by blast
     then have HCE:"has_correspond_edges diff_vec_trans r" by blast
-    have "agg_input r = (rev (map (λi. length ts - i - 1) sol))" using R rsol_def by force
+    have "agg_input r = (rev (map (\<lambda>i. length ts - i - 1) sol))" using R rsol_def by force
     then have LEN_R:"0 < length (agg_input r)" using SOL using is_solution_def by force
     have ZERO:"coeff (calc_output_from_euc (edges_used_count r)) = coeff zero"
       using relax_output[OF  HCE] R by metis
